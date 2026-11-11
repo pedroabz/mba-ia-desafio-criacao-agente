@@ -1,3 +1,34 @@
+# Segredos (o .env.example e versionado; o .env, nunca)
 .env
+.env.local
+
+# Ambiente virtual / build
 .venv/
+build/
+dist/
+*.egg-info/
+
+# Python
 __pycache__/
+*.py[cod]
+
+# Caches de ferramentas
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Armazenamento local gerado em runtime (nunca versionado)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Sistema operacional / editores
+.DS_Store
+.idea/
+.vscode/
+
+# NOTA: uv.lock NAO entra aqui. Ele e versionado de proposito
+# (exigencia do desafio: pyproject.toml e uv.lock versionados).

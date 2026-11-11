@@ -1,0 +1,43 @@
+# Postgres com pgvector — o único serviço externo do projeto (ADR-0014).
+#
+# Um banco para tudo: dados do condomínio, sessão do ADK (Garantia 3) e os
+# vetores do regulamento (ADR-0015). A extensão `vector` é criada pelo DDL da
+# aplicação, não por script de inicialização da imagem, porque o ADR-0006 diz
+# que quem aplica o schema é a aplicação — em dois lugares ele divergiria.
+#
+#   docker compose up -d       # sobe o banco
+#   docker compose down        # para, preservando o volume
+#   docker compose down -v     # para e APAGA os dados
+services:
+  banco:
+    # A imagem oficial do pgvector é o Postgres com a extensão já compilada.
+    # Tag fixada: `pg17` sem sufixo flutuante, para um clone limpo amanhã subir
+    # o mesmo banco que subiu hoje.
+    image: pgvector/pgvector:pg17
+    container_name: aurora-banco
+    environment:
+      POSTGRES_USER: aurora
+      POSTGRES_PASSWORD: aurora
+      POSTGRES_DB: aurora
+    ports:
+      # 5433 no host, não 5432: quem já tem um Postgres local não precisa
+      # pará-lo para rodar este projeto. A URL em `app/config.py` usa esta porta.
+      - "5433:5432"
+    volumes:
+      - aurora-dados:/var/lib/postgresql/data
+    # O healthcheck é o que permite `docker compose up -d --wait` devolver o
+    # controle só quando o banco aceita conexão. Sem ele, a restauração logo
+    # depois do `up` falha de forma intermitente, porque o Postgres ainda está
+    # subindo.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurora -d aurora"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  # Volume nomeado: `docker compose down` preserva os dados, que é o que o
+  # passo 13 do roteiro do avaliador exige (reiniciar sem restaurar e os dados
+  # continuarem lá).
+  aurora-dados:

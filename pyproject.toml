@@ -1,0 +1,82 @@
+[project]
+name = "residencial-aurora"
+version = "0.1.0"
+description = "Assistente virtual do Residencial Aurora: agentes Google ADK expostos por uma API FastAPI."
+readme = "README.md"
+authors = [
+    { name = "pedroabz", email = "pedroo.bezerra@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    # Google ADK: serie 2, >= 2.2.0, com a versao EXATA fixada (sem range).
+    # Exigencia do desafio, conferida no passo 15 da correcao.
+    "google-adk[db]==2.14.0",
+    # API HTTP em http://localhost:8000
+    "fastapi>=0.162.2",
+    "uvicorn[standard]>=0.54.0",
+    # Modelos de dados do contrato da API e leitura da configuracao do .env
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
+    "python-dotenv>=1.2.4",
+    # Postgres (ADR-0014). O driver precisa ser ASSINCRONO: o
+    # DatabaseSessionService do ADK recusa URL de driver sincrono em tempo de
+    # construcao (achado 8 do spike R1, medido com sqlite://).
+    "asyncpg>=0.31.0",
+    # Adaptador do tipo `vector` para o SQLAlchemy/asyncpg (ADR-0015 e
+    # ADR-0020). Sem ele o vetor de 768 dimensoes iria como texto.
+    "pgvector>=0.4.1",
+]
+
+[build-system]
+# Necessário porque o projeto passou a expor comandos (`[project.scripts]`).
+# `packages = ["app"]` é explícito de propósito: sem isso o setuptools tenta
+# adivinhar e acha `dados`, `docs`, `tests` e `scripts` também.
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[project.scripts]
+# Os dois comandos que o enunciado exige (passo 1 do roteiro do avaliador).
+aurora-restaurar = "app.cli:restaurar"
+aurora-servir = "app.cli:servir"
+
+[tool.uv]
+# Era `false` enquanto isto era só uma aplicação sem pontos de entrada. Os
+# comandos acima precisam do pacote instalado no ambiente para existirem como
+# executáveis.
+package = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# O projeto é aplicação, não biblioteca instalada (`package = false` acima),
+# então a raiz precisa entrar no sys.path para `import app` funcionar.
+pythonpath = ["."]
+markers = [
+    # Cenario ainda sem implementacao. FALHA de proposito: cenario pulado e
+    # invisivel, e invisivel e o mesmo que perdido. Implementar = remover a
+    # etiqueta do .feature e fazer passar. Nunca apagar o cenario.
+    "pendente: cenario derivado de uma decisao, ainda nao implementado",
+    # Camada — diz contra o que o cenario roda, e portanto quando pode ficar verde.
+    "storage: roda contra o repositorio/banco direto; nao precisa de modelo",
+    "api: roda contra as rotas HTTP",
+    "conversa: precisa do agente respondendo, com chave de API configurada",
+    # Passa pelo runner do ADK, mas NAO gasta API: o modelo e roteirizado ou o
+    # endpoint e um stub HTTP. Existe porque tres cenarios estavam marcados
+    # @conversa sem precisar de chave, e isso mentia na descricao do marcador
+    # e os deixava fora do filtro "roda sem gastar API".
+    "runner: roda pelo runner do ADK com modelo roteirizado ou stub; sem chave de API",
+    # Inspeciona a ARVORE DE AGENTES, nao o comportamento: nao precisa de
+    # chave de API, so dos agentes existirem. Fica verde antes dos @conversa.
+    "estrutura: inspeciona a arvore de agentes montada (sem chamar o modelo)",
+    "ferramenta: chama a ferramenta direto, com ToolContext de teste; sem modelo",
+    "recuperacao: exercita a busca no regulamento; precisa dos vetores",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "pytest-bdd>=9.0.1",
+]
